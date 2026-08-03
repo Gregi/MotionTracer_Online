@@ -1,15 +1,345 @@
 <!DOCTYPE html>
-<html>
+<html lang="de">
 <head>
-<title>Page Title</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web Serial Live Monitor</title>
+  
+  <!-- Chart.js, Luxon Adapter (für Zeitachsen) und Streaming-Plugin über CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1/dist/chartjs-adapter-luxon.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-streaming@2.0.0/dist/chartjs-plugin-streaming.min.js"></script>
+
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --text-color: #f8fafc;
+      --accent-color: #38bdf8;
+      --danger-color: #ef4444;
+      --success-color: #22c55e;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 900px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      background: var(--card-bg);
+      padding: 15px 20px;
+      border-radius: 8px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    select, button {
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: 1px solid #475569;
+      background-color: #334155;
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    button.connect {
+      background-color: var(--accent-color);
+      color: #0f172a;
+      font-weight: bold;
+      border: none;
+    }
+
+    button.disconnect {
+      background-color: var(--danger-color);
+      color: white;
+      border: none;
+    }
+
+    .status-badge {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: bold;
+      background-color: #475569;
+    }
+
+    .status-badge.connected {
+      background-color: var(--success-color);
+      color: #0f172a;
+    }
+
+    .chart-box {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 8px;
+      position: relative;
+      height: 450px;
+    }
+
+    .console-box {
+      margin-top: 20px;
+      background: #020617;
+      border-radius: 8px;
+      padding: 10px 15px;
+      font-family: monospace;
+      font-size: 13px;
+      height: 100px;
+      overflow-y: auto;
+      color: #a7f3d0;
+    }
+  </style>
 </head>
 <body>
 
-<h1>This is a Heading</h1>
-<p>This is a paragraph.</p>
+<div class="container">
+  <header>
+    <div>
+      <h2 style="margin:0;">Serial Monitor Live</h2>
+      <span id="status" class="status-badge">Getrennt</span>
+    </div>
+
+    <div class="controls">
+      <label for="baudRate">Baudrate:</label>
+      <select id="baudRate">
+        <option value="9600">9600</option>
+        <option value="57600">57600</option>
+        <option value="115200" selected>115200</option>
+      </select>
+
+      <button id="btnConnect" class="connect" onclick="toggleConnect()">Verbinden</button>
+    </div>
+  </header>
+
+  <div class="chart-box">
+    <canvas id="liveChart"></canvas>
+  </div>
+
+  <div id="console" class="console-box">Warte auf Verbindung...</div>
+</div>
+
+<script>
+  let port;
+  let reader;
+  let keepReading = false;
+  let liveChart;
+
+  // 1. Chart.js Initalisierung mit Streaming-Plugin
+  function initChart() {
+    const ctx = document.getElementById('liveChart').getContext('2d');
+    liveChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        datasets: [
+          {
+            label: 'Wert 1',
+            borderColor: '#38bdf8',
+            backgroundColor: 'rgba(56, 189, 248, 0.1)',
+            data: [],
+            borderWidth: 2,
+            pointRadius: 0
+          },
+          {
+            label: 'Wert 2 (optional)',
+            borderColor: '#f43f5e',
+            backgroundColor: 'rgba(244, 63, 94, 0.1)',
+            data: [],
+            borderWidth: 2,
+            pointRadius: 0
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            type: 'realtime',
+            realtime: {
+              duration: 20000, // Zeige die letzten 20 Sekunden
+              refresh: 100,    // Aktualisierungsrate in ms
+              delay: 500       // Buffer-Verzögerung
+            }
+          },
+          y: {
+            grid: { color: '#334155' },
+            ticks: { color: '#94a3b8' }
+          }
+        },
+        plugins: {
+          legend: { labels: { color: '#f8fafc' } }
+        }
+      }
+    });
+  }
+
+  // 2. Verbindung Aufbauen / Trennen
+  async function toggleConnect() {
+    if (port) {
+      await disconnectSerial();
+    } else {
+      await connectSerial();
+    }
+  }
+
+  async function connectSerial() {
+    if (!('serial' in navigator)) {
+      alert('Die Web Serial API wird von diesem Browser nicht unterstützt. Bitte benutze Chrome, Edge oder Brave.');
+      return;
+    }
+
+    try {
+      // Port vom Nutzer auswählen lassen
+      port = await navigator.serial.requestPort();
+      
+      const baudRate = parseInt(document.getElementById('baudRate').value);
+      await port.open({ baudRate: baudRate });
+
+      updateUI(true);
+      logConsole(`Verbunden mit ${baudRate} Baud.`);
+
+      keepReading = true;
+      readSerialData();
+
+    } catch (err) {
+      logConsole(`Fehler: ${err.message}`);
+      await disconnectSerial();
+    }
+  }
+
+  // 3. Datenstrom lesen und parsen
+  async function readSerialData() {
+    // TextDecoderStream wandelt Bytes in Strings um
+    const textDecoder = new TextDecoderStream();
+    const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
+    const lineReader = textDecoder.readable.getReader();
+    reader = lineReader;
+
+    let buffer = '';
+
+    try {
+      while (keepReading) {
+        const { value, done } = await lineReader.read();
+        if (done) break;
+
+        buffer += value;
+        
+        // Puffer zeilenweise abarbeiten (nach \n trennen)
+        const lines = buffer.split('\n');
+        buffer = lines.pop(); // Das unvollständige Ende aufheben
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed.length > 0) {
+            processDataLine(trimmed);
+          }
+        }
+      }
+    } catch (error) {
+      logConsole(`Verbindungsabbruch: ${error.message}`);
+    } finally {
+      lineReader.releaseLock();
+      await disconnectSerial();
+    }
+  }
+
+  // 4. Verarbeiten der eingehenden Zeile (CSV oder Einzelwert)
+  function processDataLine(line) {
+    logConsole(`Empfangen: ${line}`);
+
+    // Werte trennen (unterstützt Komma oder Semikolon)
+    const values = line.split(/[,;]/).map(v => parseFloat(v.trim()));
+    const now = Date.now();
+
+    // Wert 1 ins Diagramm schieben
+    if (!isNaN(values[0])) {
+      liveChart.data.datasets[0].data.push({ x: now, y: values[0] });
+    }
+
+    // Wert 2 ins Diagramm schieben (falls in der Zeile vorhanden)
+    if (values.length > 1 && !isNaN(values[1])) {
+      liveChart.data.datasets[1].data.push({ x: now, y: values[1] });
+    }
+
+    liveChart.update('quiet');
+  }
+
+  // 5. Verbindung sauber schließen
+  async function disconnectSerial() {
+    keepReading = false;
+
+    if (reader) {
+      try {
+        await reader.cancel();
+      } catch (e) {}
+      reader = null;
+    }
+
+    if (port) {
+      try {
+        await port.close();
+      } catch (e) {}
+      port = null;
+    }
+
+    updateUI(false);
+    logConsole("Verbindung getrennt.");
+  }
+
+  // Event-Listener für abruptes Kabel-Herausziehen
+  navigator.serial?.addEventListener('disconnect', (event) => {
+    logConsole("Gerät wurde physisch getrennt!");
+    disconnectSerial();
+  });
+
+  // Helper für UI und Log
+  function updateUI(isConnected) {
+    const btn = document.getElementById('btnConnect');
+    const status = document.getElementById('status');
+
+    if (isConnected) {
+      btn.textContent = 'Trennen';
+      btn.className = 'disconnect';
+      status.textContent = 'Verbunden';
+      status.className = 'status-badge connected';
+    } else {
+      btn.textContent = 'Verbinden';
+      btn.className = 'connect';
+      status.textContent = 'Getrennt';
+      status.className = 'status-badge';
+    }
+  }
+
+  function logConsole(msg) {
+    const consoleElem = document.getElementById('console');
+    const time = new Date().toLocaleTimeString();
+    consoleElem.innerHTML += `[${time}] ${msg}<br>`;
+    consoleElem.scrollTop = consoleElem.scrollHeight;
+  }
+
+  // Chart beim Start initialisieren
+  window.onload = initChart;
+</script>
 
 </body>
 </html>
-
-<script src="script.js">
-</script>
