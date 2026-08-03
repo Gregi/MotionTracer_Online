@@ -131,7 +131,7 @@
         <option value="115200" selected>115200 Baud</option>
       </select>
 
-      <button id="btnConnect" class="connect" onclick="toggleConnect()">Port öffnen</button>
+      <button id="btnConnect" class="connect" onclick="toggleConnect()">Gerät verbinden</button>
       <button id="btnStart" class="start" onclick="startMeasurement()" disabled>Messung starten</button>
     </div>
   </header>
@@ -162,29 +162,29 @@
       data: {
         datasets: [
           {
-            label: 'Messwert 1',
+            label: 'Abstand / [cm]',
             borderColor: '#38bdf8',
             backgroundColor: 'rgba(56, 189, 248, 0.2)',
             data: [],
             borderWidth: 2,
             tension: 0.2,
-            pointRadius: 2
+            pointRadius: 0
           },
           {
-            label: 'Messwert 2',
+            label: 'Geschwindigkeit /[cm/s]',
             borderColor: '#f43f5e',
             backgroundColor: 'rgba(244, 63, 94, 0.2)',
             data: [],
             borderWidth: 2,
             tension: 0.2,
-            pointRadius: 2
+            pointRadius: 0
           }
         ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        animation: false, // Für flüssige Echtzeit-Performance ausschalten
+        animation: true, // Für flüssige Echtzeit-Performance ausschalten
         scales: {
           x: {
             type: 'linear',
