@@ -3,13 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Web Serial Live Monitor</title>
+  <title>15-Sekunden Live-Messung</title>
   
-  <!-- Chart.js, Luxon Adapter (für Zeitachsen) und Streaming-Plugin über CDN -->
+  <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1/dist/chartjs-adapter-luxon.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-streaming@2.0.0/dist/chartjs-plugin-streaming.min.js"></script>
 
   <style>
     :root {
@@ -17,8 +14,8 @@
       --card-bg: #1e293b;
       --text-color: #f8fafc;
       --accent-color: #38bdf8;
-      --danger-color: #ef4444;
       --success-color: #22c55e;
+      --danger-color: #ef4444;
     }
 
     body {
@@ -63,16 +60,20 @@
       cursor: pointer;
     }
 
-    button.connect {
-      background-color: var(--accent-color);
-      color: #0f172a;
-      font-weight: bold;
-      border: none;
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
     }
 
-    button.disconnect {
-      background-color: var(--danger-color);
+    button.connect {
+      background-color: #475569;
       color: white;
+    }
+
+    button.start {
+      background-color: var(--success-color);
+      color: #0f172a;
+      font-weight: bold;
       border: none;
     }
 
@@ -85,6 +86,11 @@
     }
 
     .status-badge.connected {
+      background-color: var(--accent-color);
+      color: #0f172a;
+    }
+
+    .status-badge.recording {
       background-color: var(--success-color);
       color: #0f172a;
     }
@@ -115,19 +121,18 @@
 <div class="container">
   <header>
     <div>
-      <h2 style="margin:0;">Serial Monitor Live</h2>
+      <h2 style="margin:0;">15-Sekunden Messung</h2>
       <span id="status" class="status-badge">Getrennt</span>
     </div>
 
     <div class="controls">
-      <label for="baudRate">Baudrate:</label>
       <select id="baudRate">
-        <option value="9600">9600</option>
-        <option value="57600">57600</option>
-        <option value="115200" selected>115200</option>
+        <option value="9600">9600 Baud</option>
+        <option value="115200" selected>115200 Baud</option>
       </select>
 
-      <button id="btnConnect" class="connect" onclick="toggleConnect()">Verbinden</button>
+      <button id="btnConnect" class="connect" onclick="toggleConnect()">Port öffnen</button>
+      <button id="btnStart" class="start" onclick="startMeasurement()" disabled>Messung starten</button>
     </div>
   </header>
 
@@ -135,53 +140,72 @@
     <canvas id="liveChart"></canvas>
   </div>
 
-  <div id="console" class="console-box">Warte auf Verbindung...</div>
+  <div id="console" class="console-box">Bitte zuerst den Port verbinden...</div>
 </div>
 
 <script>
   let port;
   let reader;
   let keepReading = false;
-  let liveChart;
+  let chart;
 
-  // 1. Chart.js Initalisierung mit Streaming-Plugin
+  // Messungs-Status
+  let isRecording = false;
+  let startTime = 0;
+  const MAX_DURATION_SEC = 15;
+
+  // 1. Chart.js Initialisierung mit festen Achsen
   function initChart() {
     const ctx = document.getElementById('liveChart').getContext('2d');
-    liveChart = new Chart(ctx, {
+    chart = new Chart(ctx, {
       type: 'line',
       data: {
         datasets: [
           {
-            label: 'Wert 1',
+            label: 'Messwert 1',
             borderColor: '#38bdf8',
-            backgroundColor: 'rgba(56, 189, 248, 0.1)',
+            backgroundColor: 'rgba(56, 189, 248, 0.2)',
             data: [],
             borderWidth: 2,
-            pointRadius: 0
+            tension: 0.2,
+            pointRadius: 2
           },
           {
-            label: 'Wert 2 (optional)',
+            label: 'Messwert 2',
             borderColor: '#f43f5e',
-            backgroundColor: 'rgba(244, 63, 94, 0.1)',
+            backgroundColor: 'rgba(244, 63, 94, 0.2)',
             data: [],
             borderWidth: 2,
-            pointRadius: 0
+            tension: 0.2,
+            pointRadius: 2
           }
         ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: false, // Für flüssige Echtzeit-Performance ausschalten
         scales: {
           x: {
-            type: 'realtime',
-            realtime: {
-              duration: 20000, // Zeige die letzten 20 Sekunden
-              refresh: 100,    // Aktualisierungsrate in ms
-              delay: 500       // Buffer-Verzögerung
-            }
+            type: 'linear',
+            min: 0,
+            max: MAX_DURATION_SEC,
+            title: {
+              display: true,
+              text: 'Zeit (Sekunden)',
+              color: '#94a3b8'
+            },
+            grid: { color: '#334155' },
+            ticks: { color: '#94a3b8', stepSize: 1 }
           },
           y: {
+            min: 0,
+            max: 45,
+            title: {
+              display: true,
+              text: 'Messwerte (0 - 45)',
+              color: '#94a3b8'
+            },
             grid: { color: '#334155' },
             ticks: { color: '#94a3b8' }
           }
@@ -193,43 +217,57 @@
     });
   }
 
-  // 2. Verbindung Aufbauen / Trennen
-  async function toggleConnect() {
-    if (port) {
-      await disconnectSerial();
-    } else {
-      await connectSerial();
-    }
+  // 2. Messung triggern (Reset & Start)
+  function startMeasurement() {
+    if (!port) return;
+
+    // Chart zurücksetzen
+    chart.data.datasets[0].data = [];
+    chart.data.datasets[1].data = [];
+    chart.update();
+
+    startTime = Date.now();
+    isRecording = true;
+
+    document.getElementById('btnStart').disabled = true;
+    updateStatus('recording', 'Messung läuft (0-15s)...');
+    logConsole("--- Neue Messung gestartet ---");
   }
 
+  function stopMeasurement() {
+    isRecording = false;
+    document.getElementById('btnStart').disabled = false;
+    updateStatus('connected', 'Bereit für neue Messung');
+    logConsole("--- 15 Sekunden abgelaufen. Messung beendet. ---");
+  }
+
+  // 3. Serieller Datenstrom lesen
   async function connectSerial() {
     if (!('serial' in navigator)) {
-      alert('Die Web Serial API wird von diesem Browser nicht unterstützt. Bitte benutze Chrome, Edge oder Brave.');
+      alert('Die Web Serial API wird von diesem Browser nicht unterstützt.');
       return;
     }
 
     try {
-      // Port vom Nutzer auswählen lassen
       port = await navigator.serial.requestPort();
-      
       const baudRate = parseInt(document.getElementById('baudRate').value);
-      await port.open({ baudRate: baudRate });
+      await port.open({ baudRate });
 
-      updateUI(true);
-      logConsole(`Verbunden mit ${baudRate} Baud.`);
+      updateStatus('connected', 'Verbunden');
+      document.getElementById('btnConnect').textContent = 'Port schließen';
+      document.getElementById('btnStart').disabled = false;
+      logConsole(`Port mit ${baudRate} Baud geöffnet.`);
 
       keepReading = true;
       readSerialData();
 
     } catch (err) {
-      logConsole(`Fehler: ${err.message}`);
+      logConsole(`Fehler beim Öffnen: ${err.message}`);
       await disconnectSerial();
     }
   }
 
-  // 3. Datenstrom lesen und parsen
   async function readSerialData() {
-    // TextDecoderStream wandelt Bytes in Strings um
     const textDecoder = new TextDecoderStream();
     const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
     const lineReader = textDecoder.readable.getReader();
@@ -243,14 +281,12 @@
         if (done) break;
 
         buffer += value;
-        
-        // Puffer zeilenweise abarbeiten (nach \n trennen)
         const lines = buffer.split('\n');
-        buffer = lines.pop(); // Das unvollständige Ende aufheben
+        buffer = lines.pop();
 
         for (const line of lines) {
           const trimmed = line.trim();
-          if (trimmed.length > 0) {
+          if (trimmed.length > 0 && isRecording) {
             processDataLine(trimmed);
           }
         }
@@ -263,81 +299,78 @@
     }
   }
 
-  // 4. Verarbeiten der eingehenden Zeile (CSV oder Einzelwert)
+  // 4. Zeile verarbeiten (Format: Zeit, Wert1, Wert2)
   function processDataLine(line) {
-    logConsole(`Empfangen: ${line}`);
+    // Erwartet: "Zeit, Wert1, Wert2"
+    const parts = line.split(',').map(v => parseFloat(v.trim()));
 
-    // Werte trennen (unterstützt Komma oder Semikolon)
-    const values = line.split(/[,;]/).map(v => parseFloat(v.trim()));
-    const now = Date.now();
+    if (parts.length >= 3 && !isNaN(parts[1]) && !isNaN(parts[2])) {
+      
+      // Relative Zeit im Browser seit Klick auf "Messung starten"
+      const elapsedSec = (Date.now() - startTime) / 1000;
 
-    // Wert 1 ins Diagramm schieben
-    if (!isNaN(values[0])) {
-      liveChart.data.datasets[0].data.push({ x: now, y: values[0] });
+      // Wenn die 15 Sekunden überschritten sind -> Messung stoppen
+      if (elapsedSec > MAX_DURATION_SEC) {
+        stopMeasurement();
+        return;
+      }
+
+      const val1 = parts[1];
+      const val2 = parts[2];
+
+      logConsole(`t=${elapsedSec.toFixed(2)}s | W1: ${val1} | W2: ${val2}`);
+
+      // Punkte hinzufügen (x = Zeit in Sek, y = Wert)
+      chart.data.datasets[0].data.push({ x: elapsedSec, y: val1 });
+      chart.data.datasets[1].data.push({ x: elapsedSec, y: val2 });
+
+      chart.update('none'); // Schnelles Rendering ohne Animation
     }
-
-    // Wert 2 ins Diagramm schieben (falls in der Zeile vorhanden)
-    if (values.length > 1 && !isNaN(values[1])) {
-      liveChart.data.datasets[1].data.push({ x: now, y: values[1] });
-    }
-
-    liveChart.update('quiet');
   }
 
-  // 5. Verbindung sauber schließen
+  // 5. Port-Handling
+  async function toggleConnect() {
+    if (port) {
+      await disconnectSerial();
+    } else {
+      await connectSerial();
+    }
+  }
+
   async function disconnectSerial() {
+    isRecording = false;
     keepReading = false;
 
     if (reader) {
-      try {
-        await reader.cancel();
-      } catch (e) {}
+      try { await reader.cancel(); } catch (e) {}
       reader = null;
     }
 
     if (port) {
-      try {
-        await port.close();
-      } catch (e) {}
+      try { await port.close(); } catch (e) {}
       port = null;
     }
 
-    updateUI(false);
-    logConsole("Verbindung getrennt.");
+    document.getElementById('btnConnect').textContent = 'Port öffnen';
+    document.getElementById('btnStart').disabled = true;
+    updateStatus('disconnected', 'Getrennt');
+    logConsole("Port geschlossen.");
   }
 
-  // Event-Listener für abruptes Kabel-Herausziehen
-  navigator.serial?.addEventListener('disconnect', (event) => {
-    logConsole("Gerät wurde physisch getrennt!");
-    disconnectSerial();
-  });
-
-  // Helper für UI und Log
-  function updateUI(isConnected) {
-    const btn = document.getElementById('btnConnect');
-    const status = document.getElementById('status');
-
-    if (isConnected) {
-      btn.textContent = 'Trennen';
-      btn.className = 'disconnect';
-      status.textContent = 'Verbunden';
-      status.className = 'status-badge connected';
-    } else {
-      btn.textContent = 'Verbinden';
-      btn.className = 'connect';
-      status.textContent = 'Getrennt';
-      status.className = 'status-badge';
-    }
+  function updateStatus(state, text) {
+    const badge = document.getElementById('status');
+    badge.textContent = text;
+    badge.className = 'status-badge';
+    if (state === 'connected') badge.classList.add('connected');
+    if (state === 'recording') badge.classList.add('recording');
   }
 
   function logConsole(msg) {
     const consoleElem = document.getElementById('console');
-    const time = new Date().toLocaleTimeString();
-    consoleElem.innerHTML += `[${time}] ${msg}<br>`;
+    consoleElem.innerHTML += `${msg}<br>`;
     consoleElem.scrollTop = consoleElem.scrollHeight;
   }
 
-  // Chart beim Start initialisieren
   window.onload = initChart;
 </script>
 
