@@ -1,18 +1,31 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<script src="script.js"></script>
+ <script src="https://cdn.plot.ly/plotly-4.1.0.min.js" charset="utf-8"></script>
+<script src="script.js" defer></script>
 </head>
 <body>
-<p1>Programm zum Verbinden mit dem Arduino über eine serielle Schnittstelle</p1>
+
 <container>
-  <p id="available_devices">Verfügbare Geräte:</p>
-<button>
+<h1>MotionTracer</h1>
+<br>
+<button id="connectButton">
   Connect to Arduino
 </button>
-<button onclick="searchPorts()">
-  Zeige serielle Schnittstellen
-</button>
+<br>
 </container>
+
+
+<container>
+<h2>Bewegungsdiagramm</h2>
+<button onclick="startMeasurement()">Messung starten</button>
+<p id="myPlot"></p> 
+</container>  
+
+<container id="messages">
+  <p id="message">Messages will appear here... </p>
+</container>
+
+
 </body>
 </html>
