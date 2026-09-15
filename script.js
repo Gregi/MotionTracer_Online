@@ -1,4 +1,3 @@
-
 let port;
 let reader;
 let connectionStatus = "disconnected";
@@ -18,6 +17,7 @@ let firstRead = true;
 
 
 generatePlot();
+drawStandardLine(myPlot, data);
 
 if (!('serial' in navigator)) {
       alert('Die Web Serial API wird von Ihrem Browser leider nicht unterstützt (nutze z.B. Chrome oder Edge).');

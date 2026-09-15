@@ -1,0 +1,223 @@
+/* ==========================================================================
+   1. VARIABLES & THEMING (Farbpalette & Abstände)
+   ========================================================================== */
+:root {
+  /* Farbpalette */
+  --primary: #3b82f6;          /* Modernes Blau */
+  --primary-hover: #2563eb;
+  --secondary: #64748b;        /* Dezentes Grau */
+  --secondary-hover: #475569;
+  --accent: #10b981;           /* Akzentgrün für z. B. Ausführen/Erfolg */
+  
+  --bg-main: #f8fafc;          /* Heller, augenschonender Hintergrund */
+  --bg-card: #ffffff;          /* Weiß für Container/Karten */
+  --text-main: #0f172a;        /* Dunkles, gut lesbares Grau/Schwarz */
+  --text-muted: #64748b;
+  --border-color: #e2e8f0;
+
+  /* Radien & Schatten */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  
+  /* Schriftart & Übergänge */
+  --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --transition: all 0.2s ease-in-out;
+}
+
+/* ==========================================================================
+   2. GLOBAL RESET & BASE STYLES
+   ========================================================================== */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  line-height: 1.6;
+  padding: 2rem 1rem;
+}
+
+/* Haupt-Container für die Website */
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* Typografie */
+h1, h2, h3 {
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--text-main);
+}
+
+h1 {
+  font-size: 2.25rem;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+p.subtitle {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* ==========================================================================
+   3. KARTEN & LAYOUT (Karten-Look für Schulanwendungen)
+   ========================================================================== */
+.card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-md);
+  transition: var(--transition);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+/* Grid-Layout für Eingaben/Bedienfeld */
+.controls-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.25rem;
+  align-items: flex-end;
+}
+
+/* ==========================================================================
+   4. FORMULARE, INPUTS & BUTTONS
+   ========================================================================== */
+/* Eingabefelder & Select-Menüs */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+input, select, textarea {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  font-family: inherit;
+  font-size: 0.95rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background-color: #fff;
+  color: var(--text-main);
+  outline: none;
+  transition: var(--transition);
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+/* Base Button Style */
+button, .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: var(--shadow-sm);
+}
+
+button:active, .btn:active {
+  transform: translateY(1px);
+}
+
+/* Button Varianten */
+.btn-primary {
+  background-color: var(--primary);
+  color: white;
+}
+.btn-primary:hover {
+  background-color: var(--primary-hover);
+}
+
+.btn-secondary {
+  background-color: #f1f5f9;
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+}
+.btn-secondary:hover {
+  background-color: #e2e8f0;
+}
+
+.btn-success {
+  background-color: var(--accent);
+  color: white;
+}
+.btn-success:hover {
+  background-color: #059669;
+}
+
+/* Button Gruppe (falls du mehrere Buttons nebeneinander hast) */
+.btn-group {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* ==========================================================================
+   5. PLOTLY DIAGRAMM CONTAINER STYLING
+   ========================================================================== */
+.plotly-container {
+  width: 100%;
+  min-height: 450px;
+  border-radius: var(--radius-md);
+  overflow: hidden; /* Verhindert das Überstehen bei runden Ecken */
+}
+
+/* Plotly Responsive Fixing & Feinschliff */
+.js-plotly-plot .plotly .modebar {
+  top: 10px !important;
+  right: 10px !important;
+  background: rgba(255, 255, 255, 0.8) !important;
+  border-radius: var(--radius-sm);
+  backdrop-filter: blur(4px);
+}
+
+/* ==========================================================================
+   6. RESPONSIVE DESIGN (Für Mobilgeräte/Tablets in der Schule)
+   ========================================================================== */
+@media (max-width: 640px) {
+  body {
+    padding: 1rem 0.5rem;
+  }
+  
+  .card {
+    padding: 1rem;
+  }
+  
+  .btn {
+    width: 100%; /* Auf Smartphones nehmen Buttons die volle Breite ein */
+  }
+}
