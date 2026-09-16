@@ -1,6 +1,7 @@
 let port;
 let reader;
-let connectionStatus = "disconnected";
+let systemStatus = "disconnected";
+//possible: "disconnected", "connected", "measuring", "error"
 let keepReading = false; // Steuerung für die Leseschleif
 
 
@@ -10,12 +11,12 @@ let firstTimeStamp;
 let TimeStampassigned = false;
 
 //trace1 is always the data from the Arduino
-let trace1 ={
+let trace1 = {
   type: 'scatter',
   mode: 'lines',
   x: [],
   y: [],
-  line: {color: 'blue'},
+  line: { color: 'blue' },
   showlegend: false
 };
 //trace2 is a line inside the plot 
@@ -24,7 +25,7 @@ let trace2 = {
   mode: 'lines',
   x: [],
   y: [],
-  line: {color: 'red'},
+  line: { color: 'red' },
   showlegend: false
 };
 
@@ -33,51 +34,10 @@ let data = [trace1, trace2];
 let buffer = '';
 let firstRead = true;
 
-
-generatePlot();
-
-
-if (!('serial' in navigator)) {
-  alert('Die Web Serial API wird von Ihrem Browser leider nicht unterstützt (nutze z.B. Chrome oder Edge).');
-}
-
-
-connectButton.addEventListener("click", async () => {
-  try {
-    port = await navigator.serial.requestPort();
-    await port.open({ baudRate: 115200 });
-    connectButton.innerText = "Connected";
-    connectButton.disabled = true;
-    connectionStatus = "connected";
-
-    const textDecoder = new TextDecoderStream();
-    const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
-
-    const inputStream = textDecoder.readable;
-    reader = inputStream.getReader();
-  } catch (error) {
-    console.error("Error opening serial port:", error);
-  }
-});
-
-navigator.serial.addEventListener("disconnect", (e) => {
-  console.log("Device disconnected:", e);
-  connectButton.innerText = "Connect to Arduino";
-  connectButton.disabled = false;
-  connectionStatus = "disconnected";
-});
-
-navigator.serial.addEventListener("connect", (e) => {
-  console.log("Device connected:", e);
-  connectButton.innerText = "Connected";
-  connectButton.disabled = true;
-  connectionStatus = "connected";
-});
-
-function generatePlot() {
-  const layout = {
-    xaxis: {
-      title:{ text: "Zeit/[s]"
+const standardlayout = {
+  xaxis: {
+    title: {
+      text: "Zeit/[s]"
     }, range: [-3, 10],
     tickmode: 'array',
     tickvals: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
@@ -100,16 +60,67 @@ function generatePlot() {
       }
     }
   ],
-    yaxis: { title: {text: "Position /[cm]"}, range: [0, 40] },
-    legend: false,
+  yaxis: { title: { text: "Position /[cm]" }, range: [0, 40] },
+  legend: false,
+  dragmode: 'pan', // Standardmäßig auf "pan" setzen
 };
-Plotly.newPlot("myPlot", data, layout);
-drawStandardLine(myPlot, data);
+
+
+
+
+
+generatePlot();
+
+
+if (!('serial' in navigator)) {
+  alert('Die Web Serial API wird von Ihrem Browser leider nicht unterstützt (nutze z.B. Chrome oder Edge).');
+}
+
+
+connectButton.addEventListener("click", async () => {
+  try {
+    port = await navigator.serial.requestPort();
+    await port.open({ baudRate: 115200 });
+    connectButton.innerText = "Connected";
+    connectButton.disabled = true;
+    systemStatus = "connected";
+
+    const textDecoder = new TextDecoderStream();
+    const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
+
+    const inputStream = textDecoder.readable;
+    reader = inputStream.getReader();
+    readSerialData();
+  } catch (error) {
+    console.error("Error opening serial port:", error);
+  }
+});
+
+navigator.serial.addEventListener("disconnect", (e) => {
+  console.log("Device disconnected:", e);
+  connectButton.innerText = "Connect to Arduino";
+  connectButton.disabled = false;
+  systemStatus = "disconnected";
+});
+
+navigator.serial.addEventListener("connect", (e) => {
+  console.log("Device connected:", e);
+  connectButton.innerText = "Connected";
+  connectButton.disabled = true;
+  connectionStatus = "connected";
+
+});
+
+function generatePlot() {
+
+  Plotly.newPlot("myPlot", data, standardlayout);
+  drawStandardLine(myPlot, standardlayout);
 }
 
 function startMeasurement() {
-  if (connectionStatus === "connected") {
+  if (systemStatus === "connected" || systemStatus === "measuring") {
     console.log("Starting measurement...");
+    systemStatus = "measuring";
     keepReading = true;
     resetPlot();
     readSerialData();
@@ -117,25 +128,47 @@ function startMeasurement() {
 }
 
 function updatePlot(x, y) {
-  
+
   console.log("Updating plot with x:", x, "y:", y);
   Plotly.extendTraces("myPlot", {
-    x: [[x-3]],
+    x: [[x - 3]],
     y: [[y]],
   }, [0]);
 
 }
 
+function setStandardLayout(Plot) {
+  standardlayout.dragmode = 'pan'; // Setze den Drag-Modus auf "select"
+  standardlayout.shapes = [
+    {
+      type: 'rect',
+      xref: 'x',
+      yref: 'paper', // Reicht über die gesamte Höhe des Diagramms
+      x0: -3,
+      x1: 0,
+      y0: 0,
+      y1: 1,
+      fillcolor: 'lightgray',
+      opacity: 0.5,
+      layer: 'below',
+      line: {
+        width: 0
+      }
+    }
+  ];
+  Plotly.relayout(Plot, standardlayout);
+  console.log("Standardlayout wurde gesetzt.");
+  console.log(standardlayout);
+}
 
 
-    
 
 function resetPlot() {
   // 1. Lokale Arrays leeren
   const updatedata = {
-        x: [[]], 
-        y: [[]], 
-    };
+    x: [[]],
+    y: [[]],
+  };
   // Timestamps für die neue Messung zurücksetzen
   firstTimeStamp = null;
   TimeStampassigned = false;
@@ -146,8 +179,11 @@ function resetPlot() {
 
 
 
-  Plotly.restyle  ("myPlot", updatedata,[0]); 
+  Plotly.restyle("myPlot", updatedata, [0]);
   console.log("Plot und Daten wurden zurückgesetzt.");
+
+
+  document.getElementById("receivedData").innerHTML = '';
 }
 
 
@@ -191,8 +227,13 @@ async function readSerialData() {
               }
 
               const timeInSeconds = (rawTime - firstTimeStamp) / 1000;
-              if (timeInSeconds < 13) {
+              if (timeInSeconds < 13 && systemStatus === "measuring") {
                 updatePlot(timeInSeconds, val1);
+                checkOutOfBounds(timeInSeconds, val1);
+                document.getElementById("receivedData").innerHTML += trimmedLine + "<br>";
+              }
+              else {
+                systemStatus = "connected";
               }
 
               //messageElement.innerHTML += trimmedLine + "<br>";
@@ -211,3 +252,13 @@ async function readSerialData() {
   }
 }
 
+function checkOutOfBounds(x,y) {
+  const annotations = [];
+  if (y < 0 || y > 40) {
+    document.getElementById("message").innerHTML = "Warnung: Der Wert liegt außerhalb des zulässigen Bereichs (0-40 cm).";
+  }
+  else{
+    document.getElementById("message").innerHTML = "";
+  }
+  
+}

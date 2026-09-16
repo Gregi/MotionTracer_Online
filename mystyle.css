@@ -3,15 +3,21 @@
    ========================================================================== */
 :root {
   /* Farbpalette */
-  --primary: #3b82f6;          /* Modernes Blau */
+  --primary: #3b82f6;
+  /* Modernes Blau */
   --primary-hover: #2563eb;
-  --secondary: #64748b;        /* Dezentes Grau */
+  --secondary: #64748b;
+  /* Dezentes Grau */
   --secondary-hover: #475569;
-  --accent: #10b981;           /* Akzentgrün für z. B. Ausführen/Erfolg */
-  
-  --bg-main: #f8fafc;          /* Heller, augenschonender Hintergrund */
-  --bg-card: #ffffff;          /* Weiß für Container/Karten */
-  --text-main: #0f172a;        /* Dunkles, gut lesbares Grau/Schwarz */
+  --accent: #10b981;
+  /* Akzentgrün für z. B. Ausführen/Erfolg */
+
+  --bg-main: #f8fafc;
+  /* Heller, augenschonender Hintergrund */
+  --bg-card: #ffffff;
+  /* Weiß für Container/Karten */
+  --text-main: #0f172a;
+  /* Dunkles, gut lesbares Grau/Schwarz */
   --text-muted: #64748b;
   --border-color: #e2e8f0;
 
@@ -22,7 +28,7 @@
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  
+
   /* Schriftart & Übergänge */
   --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   --transition: all 0.2s ease-in-out;
@@ -55,7 +61,9 @@ body {
 }
 
 /* Typografie */
-h1, h2, h3 {
+h1,
+h2,
+h3 {
   font-weight: 700;
   letter-spacing: -0.025em;
   color: var(--text-main);
@@ -84,6 +92,19 @@ p.subtitle {
   border: 1px solid var(--border-color);
   box-shadow: var(--shadow-md);
   transition: var(--transition);
+  /* Neu: Flexbox aktivieren und Elemente ausrichten */
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  /* Abstand zwischen den Buttons */
+  flex-wrap: wrap;
+  /* Verhindert das Überlappen auf kleinen Bildschirmen */
+}
+
+/* Wählt den dritten Button in der Card aus */
+.card button:nth-child(3) {
+  margin-left: auto;
+  /* Geändert: Schiebt den Button nach rechts */
 }
 
 .card:hover {
@@ -114,7 +135,9 @@ label {
   color: var(--text-main);
 }
 
-input, select, textarea {
+input,
+select,
+textarea {
   width: 100%;
   padding: 0.625rem 0.875rem;
   font-family: inherit;
@@ -127,13 +150,16 @@ input, select, textarea {
   transition: var(--transition);
 }
 
-input:focus, select:focus, textarea:focus {
+input:focus,
+select:focus,
+textarea:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
 
 /* Base Button Style */
-button, .btn {
+button,
+.btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -149,7 +175,8 @@ button, .btn {
   box-shadow: var(--shadow-sm);
 }
 
-button:active, .btn:active {
+button:active,
+.btn:active {
   transform: translateY(1px);
 }
 
@@ -158,6 +185,7 @@ button:active, .btn:active {
   background-color: var(--primary);
   color: white;
 }
+
 .btn-primary:hover {
   background-color: var(--primary-hover);
 }
@@ -167,6 +195,7 @@ button:active, .btn:active {
   color: var(--text-main);
   border: 1px solid var(--border-color);
 }
+
 .btn-secondary:hover {
   background-color: #e2e8f0;
 }
@@ -175,6 +204,7 @@ button:active, .btn:active {
   background-color: var(--accent);
   color: white;
 }
+
 .btn-success:hover {
   background-color: #059669;
 }
@@ -193,7 +223,8 @@ button:active, .btn:active {
   width: 100%;
   min-height: 450px;
   border-radius: var(--radius-md);
-  overflow: hidden; /* Verhindert das Überstehen bei runden Ecken */
+  overflow: hidden;
+  /* Verhindert das Überstehen bei runden Ecken */
 }
 
 /* Plotly Responsive Fixing & Feinschliff */
@@ -212,13 +243,14 @@ button:active, .btn:active {
   body {
     padding: 1rem 0.5rem;
   }
-  
+
   .card {
     padding: 1rem;
   }
-  
+
   .btn {
-    width: 100%; /* Auf Smartphones nehmen Buttons die volle Breite ein */
+    width: 100%;
+    /* Auf Smartphones nehmen Buttons die volle Breite ein */
   }
 }
 
@@ -227,7 +259,12 @@ button:active, .btn:active {
   border: none;
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  /* Positionierung in der Bildschirmitte */
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 /* Hintergrund abdunkeln */
@@ -261,9 +298,10 @@ button:active, .btn:active {
 }
 
 .image-btn img {
-  width: 100px;
-  height: 100px;
-  object-fit: cover; /* Verhindert das Verzerrren der Bilder */
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  /* Verhindert das Verzerrren der Bilder */
   display: block;
 }
 
