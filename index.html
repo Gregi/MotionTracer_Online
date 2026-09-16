@@ -21,13 +21,59 @@
   Connect to Arduino
 </button>
 <button onclick="startMeasurement()">Messung starten</button>
+<button onclick="document.getElementById('myModal').showModal()">Linie auswählen</button>
 <div id="myPlot" class="plotly-container"></div>
 </div>
 
 <container id="messages">
-  <p id="message">Messages will appear here... </p>
+  <p id="message">This is my Testbox </p>
 </container>
 
 
 </body>
+
+<footer>
+  <p>Gregor Obermüller, 2026</p>
+</footer>
 </html>
+
+
+
+<!-- Das Popup-Modal -->
+<dialog id="myModal" class="popup-modal">
+  <div class="popup-header">
+    <h3>Bitte wähle eine Kurve aus:</h3>
+    <button class="close-btn" onclick="document.getElementById('myModal').close()">&times;</button>
+  </div>
+
+  <div class="button-grid">
+    <!-- 9 Bild-Buttons -->
+    <button class="image-btn" onclick="drawLine1(document.getElementById('myPlot'))">
+      <img src="img/Kurve1.png" alt="Option 1">
+    </button>
+    <button class="image-btn" onclick="drawLine2(document.getElementById('myPlot'))">
+      <img src="img/Kurve2.png" alt="Option 2">
+    </button>
+    <button class="image-btn" onclick="drawLine3(document.getElementById('myPlot'))">
+      <img src="img/Kurve3.png" alt="Option 3">
+    </button>
+    <button class="image-btn" onclick="drawLine4(document.getElementById('myPlot'))">
+      <img src="img/Kurve4.png" alt="Option 4">
+    </button>
+    <button class="image-btn" onclick="drawLine5(document.getElementById('myPlot'))">
+      <img src="img/Kurve5.png" alt="Option 5">
+    </button>
+    <button class="image-btn" onclick="drawLine6(document.getElementById('myPlot'))">
+      <img src="img/Kurve6.png  " alt="Option 6">
+    </button>
+    <button class="image-btn" onclick="drawLine7(document.getElementById('myPlot'))">
+      <img src="img/Kurve7.png" alt="Option 7">
+    </button>
+    <button class="image-btn" onclick="drawLine8(document.getElementById('myPlot'))">
+      <img src="img/Kurve8.png" alt="Option 8">
+    </button>
+    <button class="image-btn" onclick="drawLine9(document.getElementById('myPlot'))">
+      <img src="img/Kurve9.png" alt="Option 9">
+    </button>
+  </div>
+</dialog>

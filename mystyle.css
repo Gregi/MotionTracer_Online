@@ -221,3 +221,62 @@ button:active, .btn:active {
     width: 100%; /* Auf Smartphones nehmen Buttons die volle Breite ein */
   }
 }
+
+/* Styling für das Dialog-Popup */
+.popup-modal {
+  border: none;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+}
+
+/* Hintergrund abdunkeln */
+.popup-modal::backdrop {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+/* Grid für genau 3x3 Buttons */
+.button-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+/* Styling der Bild-Buttons */
+.image-btn {
+  background: none;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  padding: 0;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.image-btn img {
+  width: 100px;
+  height: 100px;
+  object-fit: cover; /* Verhindert das Verzerrren der Bilder */
+  display: block;
+}
+
+/* Hover-Effekt bei Maus-Klick/Mauszeiger */
+.image-btn:hover {
+  transform: scale(1.05);
+  border-color: #007bff;
+}
+
+/* Schließen-Button (X) oben rechts */
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
